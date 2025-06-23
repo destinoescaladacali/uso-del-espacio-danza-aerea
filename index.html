@@ -119,7 +119,6 @@
       <label>Horario:</label>
       <select name="horario" id="horario" required></select>
 
-      <!-- NUEVO: mensaje cuando no hay horarios -->
       <div id="sinHorarios">⚠️ No hay horarios disponibles para este día.</div>
 
       <button type="submit">Reservar</button>
@@ -130,7 +129,7 @@
   </div>
 
   <script>
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzUA2XOignocKQVz4paaUVx5jvMFx5EtlHrcHT7M-B2dybiXVSAHpbT7CckIuwMjJl0/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzu9uoiO63AciT9FR_8Y7Bs_CSpDmczoD4jAG6ojBOiEolXNze5_UpCpDU2deQ2AR0/exec';
   let diaSeleccionado = "";
   let disponibilidad = {};
 
@@ -154,11 +153,11 @@
 
   function cargarDisponibilidad() {
     const script = document.createElement("script");
-    script.src = `${API_URL}?action=obtenerDisponibilidad&callback=mostrarDiasDisponibles`;
+    const fechaActual = new Date().toISOString();
+    script.src = `${API_URL}?action=obtenerDisponibilidad&callback=mostrarDiasDisponibles&fecha=${encodeURIComponent(fechaActual)}`;
     document.body.appendChild(script);
   }
 
-  // ✅ Función mejorada con mensaje si no hay horarios
   function seleccionarDia(dia, boton) {
     diaSeleccionado = dia;
     document.querySelectorAll("#dias button").forEach(b => b.classList.remove("active-day"));
@@ -238,7 +237,8 @@
 
   cargarDisponibilidad();
   </script>
-
 </body>
 </html>
+
+
 
