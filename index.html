@@ -131,7 +131,7 @@
   </div>
 
   <script>
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzmw0NIXFbuaoGNZkIW_c7ypGVvTrU8WB7auWqMHtx5wrABCjNPFL7VxdtidhfhWLvW/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwofxVTmi7KE_Oh6S3_E9jg-OfMUcyury8D-l_guAmpDOa_UNo-X5QeSwrCGmO-ZCgx/exec';
   let diaSeleccionado = "";
   let disponibilidad = {};
 
@@ -140,7 +140,6 @@
       mostrarMensaje("Error al cargar disponibilidad.", false);
       return;
     }
-
     disponibilidad = data;
     const diasDiv = document.getElementById("dias");
     diasDiv.innerHTML = "";
@@ -151,8 +150,6 @@
       btn.onclick = () => seleccionarDia(dia, btn);
       diasDiv.appendChild(btn);
     });
-
-    // Mostrar hora de actualización
     const ahora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
     document.getElementById("ultimaActualizacion").textContent = `Actualizado a las ${ahora}`;
   }
@@ -168,11 +165,9 @@
     diaSeleccionado = dia;
     document.querySelectorAll("#dias button").forEach(b => b.classList.remove("active-day"));
     boton.classList.add("active-day");
-
     const select = document.getElementById("horario");
     const aviso = document.getElementById("sinHorarios");
     select.innerHTML = "";
-
     const horarios = disponibilidad[dia];
     if (!horarios || horarios.length === 0) {
       select.disabled = true;
@@ -190,3 +185,47 @@
   }
 
   document.getElementById("reservaForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const form = e.target;
+    const datos = new FormData(form);
+    datos.append("dia", diaSeleccionado);
+    const query = new URLSearchParams();
+    for (const [key, value] of datos.entries()) {
+      query.append(key, value);
+    }
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: query,
+      });
+      const mensaje = await res.text();
+      mostrarMensaje(mensaje, mensaje.includes("✅"));
+      if (mensaje.includes("✅")) {
+        form.style.display = "none";
+        document.getElementById("otraReserva").style.display = "block";
+      }
+    } catch (error) {
+      mostrarMensaje("❌ Error al enviar la reserva.", false);
+    }
+  });
+
+  document.getElementById("otraReserva").addEventListener("click", () => {
+    document.getElementById("reservaForm").reset();
+    document.getElementById("reservaForm").style.display = "block";
+    document.getElementById("otraReserva").style.display = "none";
+    document.getElementById("mensaje").style.display = "none";
+    cargarDisponibilidad();
+  });
+
+  function mostrarMensaje(msg, ok = true) {
+    const div = document.getElementById("mensaje");
+    div.textContent = msg;
+    div.className = ok ? "ok" : "err";
+    div.style.display = "block";
+  }
+
+  window.onload = cargarDisponibilidad;
+  </script>
+</body>
+</html>
