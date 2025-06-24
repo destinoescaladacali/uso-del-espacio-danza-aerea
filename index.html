@@ -24,6 +24,13 @@
       text-align: center;
       color: #333;
     }
+    #ultimaActualizacion {
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+      margin-top: -10px;
+      margin-bottom: 16px;
+    }
     label {
       font-weight: 600;
       margin-top: 10px;
@@ -102,25 +109,20 @@
 <body>
   <div class="container">
     <h2>Reservas Uso del Espacio Danza Aérea</h2>
+    <p id="ultimaActualizacion"></p>
 
     <form id="reservaForm">
       <label>Nombre:</label>
       <input type="text" name="nombre" required />
-
       <label>Correo electrónico:</label>
       <input type="email" name="correo" required />
-
       <label>Celular:</label>
       <input type="text" name="celular" required />
-
       <label>Selecciona un día:</label>
       <div id="dias" class="days"></div>
-
       <label>Horario:</label>
       <select name="horario" id="horario" required></select>
-
       <div id="sinHorarios">⚠️ No hay horarios disponibles para este día.</div>
-
       <button type="submit">Reservar</button>
     </form>
 
@@ -149,6 +151,10 @@
       btn.onclick = () => seleccionarDia(dia, btn);
       diasDiv.appendChild(btn);
     });
+
+    // Mostrar hora de actualización
+    const ahora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById("ultimaActualizacion").textContent = `Actualizado a las ${ahora}`;
   }
 
   function cargarDisponibilidad() {
@@ -184,61 +190,3 @@
   }
 
   document.getElementById("reservaForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    if (!diaSeleccionado) return mostrarMensaje("Selecciona un día antes de reservar", false);
-
-    const form = e.target;
-    const data = new FormData(form);
-    data.append("dia", diaSeleccionado);
-
-    const body = new URLSearchParams();
-    for (const pair of data.entries()) body.append(pair[0], pair[1]);
-
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString()
-      });
-
-      const text = await res.text();
-      mostrarMensaje(text, text.includes("✅"));
-
-      if (text.includes("✅")) {
-        form.reset();
-        diaSeleccionado = "";
-        document.getElementById("horario").innerHTML = "";
-        document.querySelectorAll("#dias button").forEach(b => b.classList.remove("active-day"));
-        document.getElementById("otraReserva").style.display = "block";
-        cargarDisponibilidad();
-      }
-    } catch (error) {
-      mostrarMensaje("Error al enviar la reserva.", false);
-    }
-  });
-
-  function mostrarMensaje(msg, ok) {
-    const mensaje = document.getElementById("mensaje");
-    mensaje.className = ok ? "ok" : "err";
-    mensaje.textContent = msg;
-    mensaje.style.display = "block";
-  }
-
-  document.getElementById("otraReserva").addEventListener("click", () => {
-    document.getElementById("reservaForm").reset();
-    document.getElementById("horario").innerHTML = "";
-    document.querySelectorAll("#dias button").forEach(b => b.classList.remove("active-day"));
-    document.getElementById("mensaje").style.display = "none";
-    document.getElementById("otraReserva").style.display = "none";
-    document.getElementById("sinHorarios").style.display = "none";
-    diaSeleccionado = "";
-    cargarDisponibilidad();
-  });
-
-  cargarDisponibilidad();
-  </script>
-</body>
-</html>
-
-
-
