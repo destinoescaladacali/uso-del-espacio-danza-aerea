@@ -4,198 +4,136 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Reservas Danza Aérea</title>
-  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap" rel="stylesheet"/>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background-color: #f9f9f9;
-      margin: 0;
-      padding: 20px;
+      background: #f3f3f3;
+      display: flex;
+      justify-content: center;
+      padding: 30px;
     }
     .container {
-      max-width: 500px;
-      margin: auto;
-      background: white;
-      border-radius: 12px;
+      background: #fff;
       padding: 30px;
+      border-radius: 14px;
       box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 500px;
     }
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-    label {
-      font-weight: 600;
-      margin-top: 10px;
-      display: block;
-    }
+    h2 { text-align: center; }
+    label { font-weight: bold; display: block; margin-top: 16px; }
     input, select, button {
       width: 100%;
-      padding: 12px;
+      padding: 10px;
       margin-top: 6px;
-      margin-bottom: 16px;
       border-radius: 8px;
       border: 1px solid #ccc;
-      font-size: 15px;
-    }
-    .days {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-    }
-    .days button {
-      background-color: #eee;
-      border: none;
-      padding: 10px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    .days button.active-day {
-      background-color: #ff9800;
-      color: white;
     }
     button[type="submit"] {
-      background: #ffa726;
+      background-color: #ffa726;
       color: white;
-      font-weight: bold;
       border: none;
+      font-weight: bold;
+      margin-top: 20px;
+      cursor: pointer;
     }
     #mensaje {
       display: none;
+      padding: 10px;
+      margin-top: 20px;
+      border-radius: 8px;
+      font-weight: bold;
       text-align: center;
-      font-weight: 600;
-      padding: 12px;
-      border-radius: 10px;
-      margin-top: 10px;
     }
     #mensaje.ok {
-      background: #e6f4ea;
-      color: #202124;
-      border-left: 6px solid #34a853;
+      background: #e0f2f1;
+      color: #00695c;
     }
     #mensaje.err {
-      background: #ffe8e8;
-      color: #c62828;
-      border-left: 6px solid #c62828;
-    }
-    #otraReserva {
-      display: none;
-      margin-top: 10px;
-      padding: 10px;
-      background-color: #ddd;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
+      background: #ffebee;
+      color: #b71c1c;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Reservas Danza Aérea</h2>
-    <form id="reservaForm">
+    <form id="formulario">
       <label>Nombre:</label>
-      <input type="text" name="nombre" required />
+      <input name="nombre" required>
       <label>Correo electrónico:</label>
-      <input type="email" name="correo" required />
+      <input name="correo" type="email" required>
       <label>Celular:</label>
-      <input type="text" name="celular" required />
+      <input name="celular" required>
       <label>Selecciona un día:</label>
-      <div id="dias" class="days"></div>
+      <select id="dia" name="dia" required></select>
       <label>Horario:</label>
-      <select name="horario" id="horario" required></select>
+      <select id="horario" name="horario" required></select>
       <label>Elemento:</label>
       <select name="elemento" required>
-        <option value="telas">Telas</option>
-        <option value="lira">Lira</option>
+        <option value="Telas">Telas</option>
+        <option value="Lira">Lira</option>
       </select>
       <button type="submit">Reservar</button>
     </form>
-
     <div id="mensaje"></div>
-    <button id="otraReserva">Hacer otra reserva</button>
   </div>
 
   <script>
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzmw0NIXFbuaoGNZkIW_c7ypGVvTrU8WB7auWqMHtx5wrABCjNPFL7VxdtidhfhWLvW/exec';
-  let diaSeleccionado = "";
-  let disponibilidad = {};
+    const API = "https://script.google.com/macros/s/AKfycbzmw0NIXFbuaoGNZkIW_c7ypGVvTrU8WB7auWqMHtx5wrABCjNPFL7VxdtidhfhWLvW/exec";
 
-  function mostrarDiasDisponibles(data) {
-    disponibilidad = data;
-    const diasDiv = document.getElementById("dias");
-    diasDiv.innerHTML = "";
-    Object.keys(disponibilidad).forEach(dia => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = dia;
-      btn.onclick = () => seleccionarDia(dia, btn);
-      diasDiv.appendChild(btn);
-    });
-  }
-
-  function cargarDisponibilidad() {
-    const script = document.createElement("script");
-    const fechaActual = new Date().toISOString();
-    script.src = `${API_URL}?action=obtenerDisponibilidad&callback=mostrarDiasDisponibles&fecha=${encodeURIComponent(fechaActual)}`;
-    document.body.appendChild(script);
-  }
-
-  function seleccionarDia(dia, boton) {
-    diaSeleccionado = dia;
-    document.querySelectorAll("#dias button").forEach(b => b.classList.remove("active-day"));
-    boton.classList.add("active-day");
-    const select = document.getElementById("horario");
-    select.innerHTML = "";
-    const horarios = disponibilidad[dia];
-    horarios.forEach(h => {
-      const opt = document.createElement("option");
-      opt.value = h;
-      opt.textContent = h;
-      select.appendChild(opt);
-    });
-  }
-
-  document.getElementById("reservaForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const form = e.target;
-    const datos = new FormData(form);
-    datos.append("dia", diaSeleccionado);
-    const query = new URLSearchParams();
-    for (const [key, value] of datos.entries()) {
-      query.append(key, value);
+    function mostrarDias(data) {
+      const diaSelect = document.getElementById("dia");
+      diaSelect.innerHTML = '<option value="">Selecciona un día</option>';
+      Object.keys(data).forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        diaSelect.appendChild(opt);
+      });
+      window.dispoData = data;
     }
 
-    try {
-      const res = await fetch(API_URL, { method: "POST", body: query });
-      const mensaje = await res.text();
-      mostrarMensaje(mensaje, mensaje.includes("✅"));
-      if (mensaje.includes("✅")) {
-        form.style.display = "none";
-        document.getElementById("otraReserva").style.display = "block";
+    document.getElementById("dia").addEventListener("change", e => {
+      const horarios = window.dispoData[e.target.value] || [];
+      const hSelect = document.getElementById("horario");
+      hSelect.innerHTML = '<option value="">Selecciona un horario</option>';
+      horarios.forEach(h => {
+        const opt = document.createElement("option");
+        opt.value = h;
+        opt.textContent = h;
+        hSelect.appendChild(opt);
+      });
+    });
+
+    document.getElementById("formulario").addEventListener("submit", async e => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const query = new URLSearchParams(form).toString();
+
+      try {
+        const res = await fetch(API, { method: "POST", body: query });
+        const text = await res.text();
+        const div = document.getElementById("mensaje");
+        div.textContent = text;
+        div.className = text.includes("✅") ? "ok" : "err";
+        div.style.display = "block";
+        if (text.includes("✅")) e.target.reset();
+      } catch {
+        const div = document.getElementById("mensaje");
+        div.textContent = "❌ Error al enviar la reserva.";
+        div.className = "err";
+        div.style.display = "block";
       }
-    } catch (error) {
-      mostrarMensaje("❌ Error al enviar la reserva.", false);
+    });
+
+    function cargarDisponibilidad() {
+      const s = document.createElement("script");
+      s.src = `${API}?action=obtenerDisponibilidad&callback=mostrarDias`;
+      document.body.appendChild(s);
     }
-  });
 
-  document.getElementById("otraReserva").addEventListener("click", () => {
-    document.getElementById("reservaForm").reset();
-    document.getElementById("reservaForm").style.display = "block";
-    document.getElementById("otraReserva").style.display = "none";
-    document.getElementById("mensaje").style.display = "none";
-    cargarDisponibilidad();
-  });
-
-  function mostrarMensaje(msg, ok = true) {
-    const div = document.getElementById("mensaje");
-    div.textContent = msg;
-    div.className = ok ? "ok" : "err";
-    div.style.display = "block";
-  }
-
-  window.onload = cargarDisponibilidad;
+    window.onload = cargarDisponibilidad;
   </script>
 </body>
 </html>
