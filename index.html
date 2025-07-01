@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -59,21 +60,30 @@
   <div class="container">
     <h2>Reservas Danza Aérea</h2>
     <form id="formulario">
-      <label>Nombre:</label>
-      <input name="nombre" required>
-      <label>Correo electrónico:</label>
-      <input name="correo" type="email" required>
-      <label>Celular:</label>
-      <input name="celular" required>
+
+      <!-- Selección Día, Horario, Elemento -->
       <label>Selecciona un día:</label>
       <select id="dia" name="dia" required></select>
+
       <label>Horario:</label>
       <select id="horario" name="horario" required></select>
+
       <label>Elemento:</label>
       <select name="elemento" required>
         <option value="Telas">Telas</option>
         <option value="Lira">Lira</option>
       </select>
+
+      <!-- Datos del usuario -->
+      <label>Nombre:</label>
+      <input name="nombre" required>
+
+      <label>Correo electrónico:</label>
+      <input name="correo" type="email" required>
+
+      <label>Celular:</label>
+      <input name="celular" required>
+
       <button type="submit">Reservar</button>
     </form>
     <div id="mensaje"></div>
