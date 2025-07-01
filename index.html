@@ -104,11 +104,17 @@
       margin-top: -10px;
       margin-bottom: 16px;
     }
+    #actualizarDisponibilidad {
+      background: #2196F3;
+      color: white;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Reservas Uso del Espacio Danza Aérea</h2>
+    <button id="actualizarDisponibilidad">Actualizar disponibilidad 🔄</button>
     <p id="ultimaActualizacion"></p>
 
     <form id="reservaForm">
@@ -122,6 +128,12 @@
       <div id="dias" class="days"></div>
       <label>Horario:</label>
       <select name="horario" id="horario" required></select>
+      <label>Elemento:</label>
+      <select name="elemento" id="elemento" required>
+        <option value="">-- Selecciona --</option>
+        <option value="telas">Telas</option>
+        <option value="lira">Lira</option>
+      </select>
       <div id="sinHorarios">⚠️ No hay horarios disponibles para este día.</div>
       <button type="submit">Reservar</button>
     </form>
@@ -131,101 +143,109 @@
   </div>
 
   <script>
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzmw0NIXFbuaoGNZkIW_c7ypGVvTrU8WB7auWqMHtx5wrABCjNPFL7VxdtidhfhWLvW/exec';
-  let diaSeleccionado = "";
-  let disponibilidad = {};
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzmw0NIXFbuaoGNZkIW_c7ypGVvTrU8WB7auWqMHtx5wrABCjNPFL7VxdtidhfhWLvW/exec';
+    let diaSeleccionado = "";
+    let disponibilidad = {};
 
-  function mostrarDiasDisponibles(data) {
-    if (!data || typeof data !== 'object') {
-      mostrarMensaje("Error al cargar disponibilidad.", false);
-      return;
-    }
-    disponibilidad = data;
-    const diasDiv = document.getElementById("dias");
-    diasDiv.innerHTML = "";
-    Object.keys(disponibilidad).forEach(dia => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = dia;
-      btn.onclick = () => seleccionarDia(dia, btn);
-      diasDiv.appendChild(btn);
-    });
-    const ahora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById("ultimaActualizacion").textContent = `Actualizado a las ${ahora}`;
-  }
-
-  function cargarDisponibilidad() {
-    const script = document.createElement("script");
-    const fechaActual = new Date().toISOString();
-    script.src = `${API_URL}?action=obtenerDisponibilidad&callback=mostrarDiasDisponibles&fecha=${encodeURIComponent(fechaActual)}`;
-    document.body.appendChild(script);
-  }
-
-  function seleccionarDia(dia, boton) {
-    diaSeleccionado = dia;
-    document.querySelectorAll("#dias button").forEach(b => b.classList.remove("active-day"));
-    boton.classList.add("active-day");
-    const select = document.getElementById("horario");
-    const aviso = document.getElementById("sinHorarios");
-    select.innerHTML = "";
-    const horarios = disponibilidad[dia];
-    if (!horarios || horarios.length === 0) {
-      select.disabled = true;
-      aviso.style.display = "block";
-    } else {
-      select.disabled = false;
-      aviso.style.display = "none";
-      horarios.forEach(h => {
-        const opt = document.createElement("option");
-        opt.value = h;
-        opt.textContent = h;
-        select.appendChild(opt);
-      });
-    }
-  }
-
-  document.getElementById("reservaForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const form = e.target;
-    const datos = new FormData(form);
-    datos.append("dia", diaSeleccionado);
-    const query = new URLSearchParams();
-    for (const [key, value] of datos.entries()) {
-      query.append(key, value);
-    }
-
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        body: query,
-      });
-      const mensaje = await res.text();
-      mostrarMensaje(mensaje, mensaje.includes("✅"));
-      if (mensaje.includes("✅")) {
-        form.style.display = "none";
-        document.getElementById("otraReserva").style.display = "block";
+    function mostrarDiasDisponibles(data) {
+      if (!data || typeof data !== 'object') {
+        mostrarMensaje("Error al cargar disponibilidad.", false);
+        return;
       }
-    } catch (error) {
-      mostrarMensaje("❌ Error al enviar la reserva.", false);
+      disponibilidad = data;
+      const diasDiv = document.getElementById("dias");
+      diasDiv.innerHTML = "";
+      Object.keys(disponibilidad).forEach(dia => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = dia;
+        btn.onclick = () => seleccionarDia(dia, btn);
+        diasDiv.appendChild(btn);
+      });
+      const ahora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById("ultimaActualizacion").textContent = `Actualizado a las ${ahora}`;
     }
-  });
 
-  document.getElementById("otraReserva").addEventListener("click", () => {
-    document.getElementById("reservaForm").reset();
-    document.getElementById("reservaForm").style.display = "block";
-    document.getElementById("otraReserva").style.display = "none";
-    document.getElementById("mensaje").style.display = "none";
-    cargarDisponibilidad();
-  });
+    function cargarDisponibilidad() {
+      const script = document.createElement("script");
+      const fechaActual = new Date().toISOString();
+      script.src = `${API_URL}?action=obtenerDisponibilidad&callback=mostrarDiasDisponibles&fecha=${encodeURIComponent(fechaActual)}&_=${Date.now()}`;
+      document.body.appendChild(script);
+    }
 
-  function mostrarMensaje(msg, ok = true) {
-    const div = document.getElementById("mensaje");
-    div.textContent = msg;
-    div.className = ok ? "ok" : "err";
-    div.style.display = "block";
-  }
+    function seleccionarDia(dia, boton) {
+      diaSeleccionado = dia;
+      document.querySelectorAll("#dias button").forEach(b => b.classList.remove("active-day"));
+      boton.classList.add("active-day");
 
-  window.onload = cargarDisponibilidad;
+      const select = document.getElementById("horario");
+      const aviso = document.getElementById("sinHorarios");
+      select.innerHTML = "";
+      const horarios = disponibilidad[dia];
+      if (!horarios || horarios.length === 0) {
+        select.disabled = true;
+        aviso.style.display = "block";
+      } else {
+        select.disabled = false;
+        aviso.style.display = "none";
+        horarios.forEach(h => {
+          const opt = document.createElement("option");
+          opt.value = h.horario;
+          opt.textContent = `${h.horario} (Telas: ${h.telas}, Lira: ${h.lira})`;
+          select.appendChild(opt);
+        });
+      }
+    }
+
+    document.getElementById("reservaForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const form = e.target;
+      const datos = new FormData(form);
+      datos.append("dia", diaSeleccionado);
+      const query = new URLSearchParams();
+      for (const [key, value] of datos.entries()) {
+        query.append(key, value);
+      }
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: query,
+        });
+        const mensaje = await res.text();
+        mostrarMensaje(mensaje, mensaje.includes("✅"));
+        if (mensaje.includes("✅")) {
+          form.style.display = "none";
+          document.getElementById("otraReserva").style.display = "block";
+        }
+      } catch (error) {
+        mostrarMensaje("❌ Error al enviar la reserva.", false);
+      }
+    });
+
+    document.getElementById("otraReserva").addEventListener("click", () => {
+      document.getElementById("reservaForm").reset();
+      document.getElementById("reservaForm").style.display = "block";
+      document.getElementById("otraReserva").style.display = "none";
+      document.getElementById("mensaje").style.display = "none";
+      cargarDisponibilidad();
+    });
+
+    document.getElementById("actualizarDisponibilidad").addEventListener("click", () => {
+      cargarDisponibilidad();
+    });
+
+    function mostrarMensaje(msg, ok = true) {
+      const div = document.getElementById("mensaje");
+      div.textContent = msg;
+      div.className = ok ? "ok" : "err";
+      div.style.display = "block";
+    }
+
+    window.onload = cargarDisponibilidad;
   </script>
 </body>
 </html>
+
+     
+   
