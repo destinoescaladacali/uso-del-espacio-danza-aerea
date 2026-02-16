@@ -45,14 +45,12 @@
       margin-top: 18px;
       cursor: pointer;
     }
-
     #diaTexto {
       display:block;
       margin-top: 6px;
       color:#666;
       font-size: 13px;
     }
-
     #mensaje {
       display: none;
       padding: 12px;
@@ -79,19 +77,19 @@
       <input id="fecha" name="fecha" type="text" placeholder="Elige un día en el calendario" readonly required>
       <small id="diaTexto"></small>
 
-      <!-- Se envía también el día (calculado) -->
+      <!-- Se envía también el día (calculado desde fecha) -->
       <input type="hidden" id="dia" name="dia" />
-
-      <label for="horario">Horario:</label>
-      <select id="horario" name="horario" required>
-        <option value="">Selecciona una fecha primero</option>
-      </select>
 
       <label for="elemento">Elemento:</label>
       <select id="elemento" name="elemento" required>
         <option value="">Selecciona un elemento</option>
         <option value="Telas">Telas</option>
         <option value="Lira">Lira</option>
+      </select>
+
+      <label for="horario">Horario:</label>
+      <select id="horario" name="horario" required>
+        <option value="">Selecciona una fecha y un elemento</option>
       </select>
 
       <label for="nombre">Nombre Completo:</label>
@@ -112,31 +110,78 @@
 <script>
   const API = "https://script.google.com/macros/s/AKfycbzmw0NIXFbuaoGNZkIW_c7ypGVvTrU8WB7auWqMHtx5wrABCjNPFL7VxdtidhfhWLvW/exec";
 
-  let disponibilidad = {}; // { "Lunes": ["..."], ... }
+  let disponibilidadDias = {}; // { "Lunes": ["..."], ... }
   let fechaSeleccionada = "";
   let diaSeleccionado = "";
 
-  function mostrarDias(data) {
-    if (!data || typeof data !== "object") {
-      mostrarMensaje("Error cargando disponibilidad.", false);
+  function mostrarMensaje(msg, ok) {
+    const div = document.getElementById("mensaje");
+    div.textContent = msg;
+    div.className = ok ? "ok" : "err";
+    div.style.display = "block";
+  }
+
+  function limpiarMensaje() {
+    const div = document.getElementById("mensaje");
+    div.style.display = "none";
+    div.textContent = "";
+    div.className = "";
+  }
+
+  // JSONP: días disponibles (para habilitar calendario por día de semana)
+  function cbDias(payload){
+    if (!payload || payload.error) {
+      mostrarMensaje(payload?.error || "Error cargando disponibilidad.", false);
       return;
     }
-    disponibilidad = data;
+    disponibilidadDias = payload;
     initCalendar();
   }
 
-  function cargarDisponibilidad() {
+  // JSONP: horarios disponibles para fecha+elemento
+  function cbHorarios(payload){
+    const sel = document.getElementById("horario");
+    sel.innerHTML = "";
+
+    if (!payload || payload.error) {
+      sel.innerHTML = `<option value="">No se pudo cargar horarios</option>`;
+      return;
+    }
+
+    const horarios = payload.horarios || [];
+    if (!horarios.length) {
+      sel.innerHTML = `<option value="">No hay horarios disponibles</option>`;
+      return;
+    }
+
+    sel.innerHTML = `<option value="">Selecciona un horario</option>`;
+    horarios.forEach(h => {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = h;
+      sel.appendChild(opt);
+    });
+  }
+
+  function jsonp(url){
     const s = document.createElement("script");
-    s.src = `${API}?action=obtenerDisponibilidad&callback=mostrarDias`;
+    s.src = url;
+    s.onerror = () => mostrarMensaje("Error de red cargando datos.", false);
     document.body.appendChild(s);
   }
 
-  function initCalendar() {
-    const diasDisponibles = new Set(Object.keys(disponibilidad)); // "Lunes", ...
+  function cargarDiasDisponibles(){
+    jsonp(`${API}?action=obtenerDisponibilidad&callback=cbDias`);
+  }
+
+  function initCalendar(){
+    const diasDisponibles = new Set(Object.keys(disponibilidadDias));
 
     const mapDayNameToIndex = {
-      "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Miercoles": 3,
-      "Jueves": 4, "Viernes": 5, "Sábado": 6, "Sabado": 6
+      "Domingo": 0, "Lunes": 1, "Martes": 2,
+      "Miércoles": 3, "Miercoles": 3,
+      "Jueves": 4, "Viernes": 5,
+      "Sábado": 6, "Sabado": 6
     };
 
     const allowedIndexes = new Set(
@@ -151,20 +196,18 @@
     flatpickr("#fecha", {
       dateFormat: "Y-m-d",
       minDate: "today",
-      maxDate: new Date().fp_incr(120), // ajusta (días hacia el futuro)
-      enable: [
-        function(date) {
-          return allowedIndexes.has(date.getDay());
-        }
-      ],
-      onChange: function(selectedDates, dateStr) {
+      maxDate: new Date().fp_incr(120),
+      enable: [(date) => allowedIndexes.has(date.getDay())],
+      onChange: (selectedDates, dateStr) => {
+        limpiarMensaje();
         fechaSeleccionada = dateStr;
         diaSeleccionado = obtenerNombreDia(dateStr);
 
         document.getElementById("diaTexto").textContent = `Día: ${diaSeleccionado}`;
         document.getElementById("dia").value = diaSeleccionado;
 
-        cargarHorariosParaDia(diaSeleccionado);
+        // cada vez que cambia fecha, recarga horarios si ya hay elemento
+        cargarHorariosSiListo();
       }
     });
 
@@ -172,8 +215,7 @@
   }
 
   function resetHorarios(){
-    const sel = document.getElementById("horario");
-    sel.innerHTML = `<option value="">Selecciona una fecha primero</option>`;
+    document.getElementById("horario").innerHTML = `<option value="">Selecciona una fecha y un elemento</option>`;
     document.getElementById("diaTexto").textContent = "";
     document.getElementById("dia").value = "";
     fechaSeleccionada = "";
@@ -183,4 +225,63 @@
   function obtenerNombreDia(yyyy_mm_dd) {
     const [y,m,d] = yyyy_mm_dd.split("-").map(Number);
     const dt = new Date(y, m-1, d, 12, 0, 0);
-    const dias = ["Domingo","Lunes","Martes","Miércoles","Jueves","Vi]()
+    const dias = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+    return dias[dt.getDay()];
+  }
+
+  function cargarHorariosSiListo(){
+    const elemento = document.getElementById("elemento").value;
+    const sel = document.getElementById("horario");
+
+    if (!fechaSeleccionada || !elemento) {
+      sel.innerHTML = `<option value="">Selecciona una fecha y un elemento</option>`;
+      return;
+    }
+
+    sel.innerHTML = `<option value="">Cargando horarios...</option>`;
+    const url = `${API}?action=obtenerHorarios&fecha=${encodeURIComponent(fechaSeleccionada)}&elemento=${encodeURIComponent(elemento)}&callback=cbHorarios`;
+    jsonp(url);
+  }
+
+  // cuando cambia elemento, si ya hay fecha, recarga horarios
+  document.getElementById("elemento").addEventListener("change", () => {
+    limpiarMensaje();
+    cargarHorariosSiListo();
+  });
+
+  // submit
+  document.getElementById("formulario").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    limpiarMensaje();
+
+    if (!fechaSeleccionada) return mostrarMensaje("Selecciona una fecha en el calendario.", false);
+    if (!document.getElementById("elemento").value) return mostrarMensaje("Selecciona un elemento.", false);
+
+    const form = new FormData(e.target);
+    const body = new URLSearchParams(form).toString();
+
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+      });
+
+      const text = await res.text();
+      mostrarMensaje(text, text.includes("✅"));
+
+      if (text.includes("✅")) {
+        e.target.reset();
+        resetHorarios();
+        cargarDiasDisponibles(); // refrescar calendario/días
+      }
+    } catch {
+      mostrarMensaje("❌ Error al enviar la reserva.", false);
+    }
+  });
+
+  // init
+  cargarDiasDisponibles();
+</script>
+</body>
+</html>
